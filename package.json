@@ -1,0 +1,29 @@
+{
+  "name": "recoder-server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lemonce3/recoder-server.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/lemonce3/recoder-server/issues"
+  },
+  "homepage": "https://github.com/lemonce3/recoder-server#readme",
+  "dependencies": {
+    "koa": "^2.6.2",
+    "koa-bodyparser": "^4.2.1",
+    "koa-router": "^7.4.0",
+    "randexp": "^0.5.3"
+  },
+  "devDependencies": {
+    "axios": "^0.18.0",
+    "mocha": "^5.2.0"
+  }
+}
