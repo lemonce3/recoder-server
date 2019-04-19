@@ -3,7 +3,7 @@ const config = {
 	port: 8090, host: '0.0.0.0',
 	store: []
 };
-const Register = require('../src/register');
+const register = require('../src/register').register;
 const assert = require('assert');
 
 createServer(config);
@@ -29,26 +29,49 @@ describe('API TEST', function () {
 			httpAgent.post('/window', info).then(({data}) => {
 				windowId = data;
 
-				assert.equal(Register.windows[data], info.agentId);
+				assert.deepEqual(register.windows[data], info);
 			});
 		});
 
-		//abort怎么办？
-		// it('DELETE the window', function () {
-		// 	httpAgent.delete(`/window/${windowId}`).catch(() => {
-		// 		assert.equal(Register.lastWindows[info.agentId], windowId);
-		// 	});
-		// });
-
-		// it('Create a new window after delete', function () {
-		// 	httpAgent.post('/window', info).then(({data}) => {
-		// 		assert.equal(Register.lastWindows[info.agentId], data);
-		// 	});
-		// });
+		it('DELETE the window and Create a new window after delete', function () {
+			httpAgent.delete(`/window/${windowId}`, {
+				timeout: 200
+			}).catch(() => {
+				setTimeout(function () {
+					httpAgent.post('/window', info).then(({data}) => {
+						assert.equal(windowId, data);
+					});
+				}, 1000);
+			});
+		});
 
 		it('Create anothor new window', function () {
 			httpAgent.post('/window', info).then(({data}) => {
-				assert.notEqual(Register.lastWindows[info.agentId], data);
+				windowId = data;
+
+				assert.notEqual(register.lastWindows[info.agentId], data);
+			});
+		});
+	});
+
+	describe('POST /window/:windowId/action', function () {
+		const actionRetrive = {
+			type: 'test', describe: 'test'
+		};
+
+		it('Failed to add action with 404', function () {
+			httpAgent.post('/window/test/action').then(() => {}).catch((e) => {
+				assert.equal(e.response.status, 404);
+			});
+		});
+
+		it('Failed to add action with 400', function () {
+			httpAgent.post(`/window/${windowId}/action`).then(() => {}).catch(() => {});
+		});
+
+		it('Add action succeed', function () {
+			httpAgent.post(`/window/${windowId}/action`, actionRetrive).then(() => {
+				assert.deepEqual(config.store[config.store.length - 1].info, actionRetrive);
 			});
 		});
 	});
@@ -61,28 +84,12 @@ describe('API TEST', function () {
 		});
 
 		it('DELETE the window succeed', function () {
-			httpAgent.delete(`/window/${windowId}`).then(() => {
-				assert.equal(Register.windows[windowId], undefined);
-			});
-		});
-	});
-
-	describe('POST /action', function () {
-		const actionRetrive = {
-			agentId: 1, windowId: 1, eventInfo: {
-				type: 'test'
-			}
-		};
-
-		it('Failed to add action', function () {
-			httpAgent.post('/action').catch((e) => {
-				assert.equal(e.message, 'Request failed with status code 400');
-			});
-		});
-
-		it('Add action succeed', function () {
-			httpAgent.post('/action', actionRetrive).then(() => {
-				console.log(config.store);
+			httpAgent.delete(`/window/${windowId}`, {
+				timeout: 200
+			}).then(() => {}).catch(e => {
+				setTimeout(function () {
+					assert.equal(register.getWindow(windowId), undefined);
+				}, 1000);
 			});
 		});
 	});
