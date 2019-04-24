@@ -1,82 +1,70 @@
-const register = require('../src/register').createRegister();
+const Store = require('../src/store');
+const store = new Store();
 const assert = require('assert');
 
-describe('The Method of Register test', function () {
+describe('The Method of Store test', function () {
 	const agentId = 1;
-	const windowId = 1;
-	const info = {agentId, URL: 'test', title: 'test'};
+	const info = {URL: 'test', title: 'test'};
 
-	describe('method add test', function () {
-		it('The second argument is not an object', function () {
-			register.add(windowId, 1);
+	let agent = null;
+	let windowId;
 
-			assert.deepEqual(register.windows, {
-				[windowId]: {URL: undefined, agentId: undefined, title: undefined}
-			});
-		});
+	it('CreateAgent test', function () {
+		agent = store.allocAgent(1);
 
-		it('The second argument is not an object', function () {
-			register.add(windowId, info);
-
-			assert.deepEqual(register.windows, {
-				[windowId]: info
-			});
-		});
+		assert.equal(agentId, agent.id);
 	});
 
-	describe('method delete test', function () {
-		it('The window is not exist', function () {
-			register.delete('test');
+	describe('The Method of agent', function () {
+		describe('AllocWindow test', function () {
+			it('Alloc a new window', function () {
+				windowId = agent.allocWindow(info);
 
-			assert.deepEqual({
-				windows: register.windows,
-				lastWindows: register.lastWindows
-			}, {
-				windows: {
-					[windowId]: info
-				},
-				lastWindows: {}
+				assert.deepEqual(Object.assign({}, info, {
+					id: windowId
+				}), agent.windowList[windowId]);
+			});
+
+			it('Alloc lastest delete window', function () {
+				agent.deleteWindow(windowId);
+
+				windowId = agent.allocWindow(info);
+
+				assert.deepEqual(Object.assign({}, info, {
+					id: windowId
+				}), agent.windowList[windowId]);
 			});
 		});
 
-		it('The window is existed', function () {
-			register.delete(windowId);
+		describe('GetWindow test', function () {
+			it('Get a exist window', function () {
 
-			assert.deepEqual({
-				windows: register.windows,
-				lastWindows: register.lastWindows
-			}, {
-				windows: {},
-				lastWindows: {
-					[agentId]: windowId
-				}
+				const window = agent.getWindow(windowId);
+	
+				assert.deepEqual(Object.assign({}, info, {
+					id: windowId, agentId: agent.id
+				}), window);
+			});
+
+			it('Get a not exist window', function () {
+				const window = agent.getWindow();
+	
+				assert.equal(undefined, window);
 			});
 		});
-	});
 
-	describe('method allocateWindow test', function () {
-		it('allocate last window', function () {
-			const allocatedWindowId = register.allocateWindow(agentId);
+		describe('deleteWindow test', function () {
+			it('Delete a exist window', function () {
+				agent.deleteWindow(windowId);
 
-			register.add(allocatedWindowId, info);
+				assert.equal(windowId, agent.lastWindow);
+			});
 
-			assert.equal(allocatedWindowId, windowId);
-		});
-
-		it('allocate new window', function () {
-			const allocatedWindowId = register.allocateWindow(agentId);
-
-			assert.notEqual(allocatedWindowId, windowId);
-		});
-	});
-
-	describe('method getWindow test', function () {
-		it('get a exist window', function () {
-			assert.equal(register.getWindow(), undefined);
-		});
-
-		it('get a not exist window', function () {
-			assert.deepEqual(register.getWindow(windowId), info);
+			it('Delete a not exist window', function () {
+				agent.deleteWindow();
+	
+				assert.equal(windowId, agent.lastWindow);
+			});
 		});
 	});
 });

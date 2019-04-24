@@ -1,10 +1,13 @@
 const Router = require('koa-router');
 
 const router = module.exports = new Router({prefix: '/api'});
-const register = require('./register').register;
+const Store = require('./store');
+
+const store = new Store();
+let agent = null;
 
 router.post('/window', ctx => {
-	const {request, STORE} = ctx;
+	const {request, $cache} = ctx;
 
 	const { agentId,  title, URL} = request.body;
 
@@ -13,11 +16,11 @@ router.post('/window', ctx => {
 	}
 
 	//closeWindow和openWindow是在动作分析的时候出现的动作
-	const windowId = register.allocateWindow(agentId); 
-	
-	register.add(windowId, {agentId,  title, URL});
 
-	STORE.push({
+	agent = store.allocAgent(agentId);
+	const windowId = agent.allocWindow({title, URL});
+
+	$cache.push({
 		agentId, windowId, info: {
 			type: 'jumpTo',
 			describe: {
@@ -30,7 +33,7 @@ router.post('/window', ctx => {
 });
 
 router.del('/window/:windowId', validateWindow, ctx => {
-	const {STORE, params} = ctx;
+	const {$cache, params} = ctx;
 
 	const {windowId} = params;
 	const {agentId, title, URL} = ctx.data;
@@ -39,9 +42,9 @@ router.del('/window/:windowId', validateWindow, ctx => {
 
 	return new Promise(resolve => {
 		ctx.req.on('aborted', () => {
-			register.delete(windowId);
+			agent.deleteWindow(windowId);
 
-			STORE.push({
+			$cache.push({
 				agentId, windowId, info: {
 					type: 'closeWindow',
 					describe: {
@@ -49,14 +52,14 @@ router.del('/window/:windowId', validateWindow, ctx => {
 					}
 				}
 			});
-
+			
 			resolve();
 		});
 	});
 });
 
 router.post('/window/:windowId/action', validateWindow, ctx => {
-	const {request, STORE, params} = ctx;
+	const {request, $cache, params} = ctx;
 
 	const action = request.body;
 	const {windowId} = params;
@@ -66,7 +69,7 @@ router.post('/window/:windowId/action', validateWindow, ctx => {
 		return ctx.throw(400, 'The "type" and "describe" is must.');
 	}
 
-	STORE.push({
+	$cache.push({
 		agentId: window.agentId,
 		windowId, info: action
 	});
@@ -76,7 +79,7 @@ router.post('/window/:windowId/action', validateWindow, ctx => {
 
 async function validateWindow(ctx, next) {
 	const {windowId} = ctx.params;
-	const window = register.getWindow(windowId);
+	const window = agent.getWindow(windowId);
 
 	if (!window) {
 		return ctx.throw(404, 'The window is not existed.');
