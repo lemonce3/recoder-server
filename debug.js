@@ -1,0 +1,1 @@
+console.log(require('.')({ url: 'http://localhost:10110' }).address());

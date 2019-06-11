@@ -1,15 +1,34 @@
-const router = require('./src');
 const Koa = require('koa');
+const http = require('http');
+const Router = require('koa-router');
 const bodyparser = require('koa-bodyparser');
+const EventEmitter = require('events');
+const rawProvider = exports.rawProvider = new EventEmitter();
 
-module.exports = function (options) {
-	const {host, port, cache } = options;
-	const app = new Koa();
+const app = new Koa();
+const router = new Router({ prefix: '/api' });
 
-	app.use(bodyparser());
-	app.use(router.routes());
+router.post('/snapshot', ctx => {
+	const snapshot = ctx.request.body;
+	
+	rawProvider.emit('receive-snapshot', snapshot);
+	ctx.status = 200;
+});
 
-	app.context.$cache = cache;
+router.post('/action', ctx => {
+	const action = ctx.request.body;
+	
+	if (!(action.type && action.data.rect)) {
+		return ctx.throw(400, 'The "type" and "data.rect" is must.');
+	}
+	
+	rawProvider.emit('receive-action', action);
+	ctx.status = 200;
+});
 
-	return app.listen(port, host);
-};
+app.use(bodyparser());
+app.use(router.routes());
+
+const server = http.createServer(app.callback());
+
+exports.recorderServer = server;
